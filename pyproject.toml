@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nvidia-rag"
+version = "0.1.0"
+description = "A hybrid RAG system using NVIDIA Llama-3 and SerpApi"
+authors = [{ name = "Senior AI Engineer", email = "engineer@example.com" }]
+dependencies = [
+    "openai",
+    "langchain",
+    "langchain-community",
+    "gradio",
+    "numpy",
+    "requests",
+    "python-dotenv",
+    "google-search-results",
+]
+
+[project.scripts]
+nvidia-rag = "nvidia_rag.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
