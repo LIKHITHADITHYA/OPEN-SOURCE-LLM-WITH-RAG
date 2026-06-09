@@ -16,10 +16,19 @@ dependencies = [
     "requests",
     "python-dotenv",
     "google-search-results",
+    "chromadb",
+    "fastapi",
+    "uvicorn",
+    "pydantic"
 ]
 
 [project.scripts]
 nvidia-rag = "nvidia_rag.main:main"
+nvidia-rag-api = "nvidia_rag.api.server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+

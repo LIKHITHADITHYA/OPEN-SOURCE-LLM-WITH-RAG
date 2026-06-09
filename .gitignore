@@ -6,3 +6,6 @@ __pycache__/
 .gradio/
 venv/
 .ipynb_checkpoints/
+chroma_db/
+diagnose_output.txt
+verbose_import.txt

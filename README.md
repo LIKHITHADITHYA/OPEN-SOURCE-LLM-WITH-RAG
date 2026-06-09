@@ -3,31 +3,32 @@
 A professional, modular implementation of a hybrid Retrieval-Augmented Generation (RAG) system using NVIDIA Llama-3 and SerpApi.
 
 ## Architecture
-- **`src/nvidia_rag/core`**: Main RAG engine and LLM logic.
-- **`src/nvidia_rag/tools`**: External tool integrations (Search, etc.).
-- **`src/nvidia_rag/ui`**: Web interface components (Gradio).
-- **`src/nvidia_rag/config`**: Centralized configuration and environment management.
+- **`src/nvidia_rag/core`**: Main RAG engine, Query Router, and Conversational Memory.
+- **`src/nvidia_rag/tools`**: External tools (Web Search via SerpApi, Local Vector DB via ChromaDB).
+- **`src/nvidia_rag/ui`**: Advanced Gradio interface with system controls.
+- **`src/nvidia_rag/api`**: FastAPI REST server for headless integration.
+- **`src/nvidia_rag/config`**: Centralized configuration.
 
-## Setup
-1. Clone the repository.
-2. Create and activate a virtual environment.
-3. Install the package:
-   ```bash
-   pip install -e .
-   ```
-4. Set up your `.env` file with `NVIDIA_API_KEY` and `SERPAPI_API_KEY`.
+## Features
+- **Intelligent Routing:** Automatically decides between web search, local documents, or general knowledge.
+- **Persistent Memory:** Remembers conversation history for multi-turn dialogues.
+- **Hybrid Retrieval:** Combines live internet data with local document context.
+- **API First:** Deployable as a high-performance REST API.
 
 ## Usage
 ### Web UI (Default)
-Run the application to launch the Gradio interface:
 ```bash
 nvidia-rag
 ```
 
 ### CLI Mode
-For a lightweight terminal experience:
 ```bash
 nvidia-rag --cli
+```
+
+### REST API
+```bash
+nvidia-rag --api
 ```
 
 ## Development
