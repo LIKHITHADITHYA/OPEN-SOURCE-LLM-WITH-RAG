@@ -40,7 +40,6 @@ from nvidia_rag.core.engine import RAGEngine
 from nvidia_rag.tools.search import SearchTool
 from nvidia_rag.tools.splitter import split_text_recursively
 from nvidia_rag.ui.web_ui import WebUI
-from nvidia_rag.api.server import app
 
 
 class ThreadSafeMockRecorder:
@@ -437,46 +436,6 @@ class TestPDFIngestion(unittest.TestCase):
         res = ui._process_file(mock_file)
         self.assertIn("already ingested", res)
         mock_vector_tool.add_documents.assert_not_called()
-
-    @patch("nvidia_rag.api.server.engine")
-    def test_api_server_pdf_ingestion(self, mock_engine):
-        mock_engine.vector_tool.is_document_ingested.return_value = False
-
-        from fastapi.testclient import TestClient
-        client = TestClient(app)
-        
-        # Test PDF upload
-        pdf_content = b"%PDF-1.4 mock pdf bytes"
-        response = client.post(
-            "/upload",
-            files={"file": ("test.pdf", pdf_content, "application/pdf")}
-        )
-
-        self.assertEqual(response.status_code, 200)
-        json_data = response.json()
-        self.assertEqual(json_data["status"], "success")
-        self.assertEqual(json_data["chunks_added"], 1)  # Two pages fit in one chunk
-        mock_engine.vector_tool.add_documents.assert_called_once()
-
-    @patch("nvidia_rag.api.server.engine")
-    def test_api_server_pdf_ingestion_duplicate(self, mock_engine):
-        mock_engine.vector_tool.is_document_ingested.return_value = True
-
-        from fastapi.testclient import TestClient
-        client = TestClient(app)
-        
-        # Test PDF upload
-        pdf_content = b"%PDF-1.4 mock pdf bytes"
-        response = client.post(
-            "/upload",
-            files={"file": ("test.pdf", pdf_content, "application/pdf")}
-        )
-
-        self.assertEqual(response.status_code, 200)
-        json_data = response.json()
-        self.assertEqual(json_data["status"], "skipped")
-        self.assertEqual(json_data["detail"], "Document already ingested. Skipping.")
-        mock_engine.vector_tool.add_documents.assert_not_called()
 
 
 if __name__ == "__main__":

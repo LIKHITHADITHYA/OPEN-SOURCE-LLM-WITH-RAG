@@ -10,7 +10,7 @@ A professional, modular implementation of a hybrid Retrieval-Augmented Generatio
 - **Multi-Format Ingestion:** Supports ingestion of both plain text (`.txt`) and PDF (`.pdf`) documents. Chunks, embeds (using the local `all-MiniLM-L6-v2` model), and stores documents persistently on disk.
 - **Source Validation & Fallback:** Automatically intercepts retrieval errors (such as missing search keys or empty databases) and gracefully falls back to a general knowledge response (`NONE` route), avoiding crashing or returning error logs to users.
 - **Stateful Dialogue Memory:** Maintains a rolling conversation history buffer to preserve context during multi-turn dialogue sessions.
-- **Flexible UI/API/CLI Modes:** Launch the system as an interactive Gradio web application, a lightweight terminal CLI, or a headless FastAPI REST server.
+- **Flexible UI/CLI Modes:** Launch the system as an interactive Gradio web application or a lightweight terminal CLI.
 
 ---
 
@@ -35,11 +35,8 @@ Nvidia-Llama-RAG/
 │       ├── ui/
 │       │   ├── __init__.py
 │       │   └── web_ui.py         # Gradio Chat Interface and document upload panel
-│       ├── api/
-│       │   ├── __init__.py
-│       │   └── server.py         # FastAPI endpoint server (/chat, /upload, /health)
 │       ├── __init__.py
-│       └── main.py               # Unified application launcher (Web UI, CLI, REST API)
+│       └── main.py               # Unified application launcher (Web UI, CLI)
 ├── tests/
 │   ├── test_engine.py            # Live integration test suite (requires API keys)
 │   └── test_unit.py              # Mock-based unit test suite (offline verification)
@@ -91,21 +88,12 @@ Launches a clean, interactive dialogue shell directly in your console:
 PYTHONPATH=src test_venv/bin/python -m nvidia_rag.main --cli
 ```
 
-### 3. Launch the REST API Server
-Launches the FastAPI server on `http://0.0.0.0:8000`:
-```bash
-PYTHONPATH=src test_venv/bin/python -m nvidia_rag.main --api
-```
-* **Endpoint Examples**:
-  * Upload Document: `curl -X POST "http://localhost:8000/upload" -F "file=@/path/to/document.pdf"`
-  * Chat Session: `curl -X POST "http://localhost:8000/chat" -H "Content-Type: application/json" -d '{"query": "Hello"}'`
-
 ---
 
 ## Running Tests
 
 ### 1. Run Unit Tests (Offline Validation)
-Executes **13 mocked unit tests** to verify memory sliding, document chunking, prompt templating, and error fallback states:
+Executes **16 mocked unit tests** to verify memory sliding, document chunking, prompt templating, and error fallback states:
 ```bash
 PYTHONPATH=src test_venv/bin/python tests/test_unit.py
 ```

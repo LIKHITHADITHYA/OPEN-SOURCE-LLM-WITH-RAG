@@ -17,15 +17,12 @@ dependencies = [
     "python-dotenv",
     "google-search-results",
     "chromadb",
-    "fastapi",
-    "uvicorn",
     "pydantic",
     "pypdf"
 ]
 
 [project.scripts]
 nvidia-rag = "nvidia_rag.main:main"
-nvidia-rag-api = "nvidia_rag.api.server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

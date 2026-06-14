@@ -60,20 +60,12 @@ def main():
                     break
             print("\nGoodbye!")
 
-        elif arg == "--api":
-            # Launch FastAPI REST server
-            logger.info("Starting REST API server...")
-            # pylint: disable=import-outside-toplevel
-            from nvidia_rag.api.server import main as run_api
-            run_api()
-
         else:
             # Display usage instructions for invalid arguments
             print(f"Error: Unknown argument '{arg}'")
             print("\nUsage:")
             print("  nvidia-rag          : Launch the Gradio Web UI (Default)")
             print("  nvidia-rag --cli    : Launch the Terminal interface")
-            print("  nvidia-rag --api    : Launch the REST API server")
             sys.exit(1)
 
     else:

@@ -7,7 +7,5 @@ requests
 python-dotenv
 google-search-results
 chromadb
-fastapi
-uvicorn
 pydantic
 pypdf
