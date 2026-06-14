@@ -1,129 +1,117 @@
+# NVIDIA Llama-3 Hybrid RAG (Structured)
 
-# Open-Source LLM with RAG
+A professional, modular implementation of a hybrid Retrieval-Augmented Generation (RAG) system using NVIDIA Llama-3.3 (via NIM endpoints), SerpApi, and a local ChromaDB vector database.
 
-A demonstration project that shows how to build a hybrid Retrieval-Augmented Generation (RAG) system using an OpenAI-compatible base model client (example uses an NVIDIA-compatible client in the notebook) combined with real-time web search via SerpApi. The repository's main artifact is `RAG.ipynb`, which walks through installing dependencies, wiring up SerpApi, building a hybrid RAG flow, a simple chatbot interface, caching/fallback strategies, and example evaluations.
+---
 
-> NOTE: This repository contains example notebook code for demonstration and experimentation. Do NOT commit your real API keys to the repo. Always use environment variables or secret managers.
+## Key Features
+- **Intelligent Document-Aware Routing:** Automatically routes queries between `LOCAL` documents, `WEB` search, or `NONE` (general conversation). The LLM is dynamically fed the names of uploaded documents to make highly precise routing decisions.
+- **Hybrid Retrieval:** Integrates real-time internet search results (via SerpApi) with local vector database matches (via ChromaDB).
+- **Multi-Format Ingestion:** Supports ingestion of both plain text (`.txt`) and PDF (`.pdf`) documents. Chunks, embeds (using the local `all-MiniLM-L6-v2` model), and stores documents persistently on disk.
+- **Source Validation & Fallback:** Automatically intercepts retrieval errors (such as missing search keys or empty databases) and gracefully falls back to a general knowledge response (`NONE` route), avoiding crashing or returning error logs to users.
+- **Stateful Dialogue Memory:** Maintains a rolling conversation history buffer to preserve context during multi-turn dialogue sessions.
+- **Flexible UI/API/CLI Modes:** Launch the system as an interactive Gradio web application, a lightweight terminal CLI, or a headless FastAPI REST server.
 
-## Highlights / Features
-- Real-time data search using SerpApi to ground model answers.
-- Hybrid RAG pipeline that combines retrieval (SerpApi) and generation (base LLM).
-- Basic interactive chatbot interface (Jupyter/Colab).
-- Caching for search results to improve speed and reduce quota usage.
-- Fallback handling when real-time search fails.
-- Notebook-oriented: easy to run in Google Colab or locally.
+---
 
-## Files
-- `RAG.ipynb` — Main notebook demonstrating setup, real-time search integration, the hybrid RAG system, chatbot, caching, and example tests.
+## Project Directory Structure
 
-## Requirements
-- Python 3.8+
-- Recommended pip packages (create `requirements.txt` or install individually):
-  - langchain
-  - langchain-community (or the current package offering SerpAPI integration)
-  - openai (or the SDK you use to access your base model — the notebook uses an OpenAI-compatible client)
-  - requests
-  - jupyter / ipykernel (if running locally)
-  - functools (part of stdlib)
-
-Example requirements (put in `requirements.txt`):
 ```text
-langchain
-langchain-community
-openai
-requests
-jupyter
-ipykernel
+Nvidia-Llama-RAG/
+├── src/
+│   └── nvidia_rag/
+│       ├── config/
+│       │   ├── __init__.py
+│       │   └── settings.py       # Global settings container & environment loader
+│       ├── core/
+│       │   ├── __init__.py
+│       │   ├── engine.py         # Main RAG orchestration pipeline & validation
+│       │   ├── memory.py         # Stateful rolling conversation memory buffer
+│       │   └── router.py         # LLM-based query router (WEB vs LOCAL vs NONE)
+│       ├── tools/
+│       │   ├── __init__.py
+│       │   ├── search.py         # Google Search via SerpApi with LRU caching
+│       │   └── vector_store.py   # ChromaDB persistent client, indexing, & file listing
+│       ├── ui/
+│       │   ├── __init__.py
+│       │   └── web_ui.py         # Gradio Chat Interface and document upload panel
+│       ├── api/
+│       │   ├── __init__.py
+│       │   └── server.py         # FastAPI endpoint server (/chat, /upload, /health)
+│       ├── __init__.py
+│       └── main.py               # Unified application launcher (Web UI, CLI, REST API)
+├── tests/
+│   ├── test_engine.py            # Live integration test suite (requires API keys)
+│   └── test_unit.py              # Mock-based unit test suite (offline verification)
+├── .env.example                  # Template configuration file
+├── pyproject.toml                # Build system definitions and project metadata
+├── requirements.txt              # Project package dependencies list
+└── README.md                     # Documentation
 ```
 
-(Adjust package names/versions to match your environment. If `langchain-community` is unavailable by that name, the notebook may require a package or import path that matches your langchain extensions — check the latest langchain docs.)
+---
 
-## Environment variables / Secrets
-Before running the notebook, set these environment variables (or configure secrets in Colab):
-- `SERPAPI_API_KEY` — Your SerpApi API key (https://serpapi.com/)
-- `NV_API_KEY` or the appropriate API key variable for your base model client (the notebook uses an NVIDIA endpoint in examples). If you use OpenAI, set `OPENAI_API_KEY`.
+## Setup & Configuration
 
-Important: remove any hard-coded API keys from the code and replace them with environment variables (e.g., `os.environ["SERPAPI_API_KEY"] = ...` or use Colab secrets).
+### 1. Set Up Environment Variables
+Create a `.env` file in the project root directory and define the following variables:
 
-## Usage
+```env
+# NVIDIA NIM API Key (Required for Llama-3.3 LLM operations)
+NVIDIA_API_KEY=your_nvidia_api_key_here
 
-### Google Colab
-1. Open the notebook via the Colab link at the top of `RAG.ipynb` or open in Colab:
-   [Open in Colab](https://colab.research.google.com/github/LIKHITHADITHYA/Open-Source-llm-with-RAG-/blob/main/RAG.ipynb)
-2. Set your API keys using Colab's UI or at the top of the notebook:
-   ```python
-   import os
-   os.environ["SERPAPI_API_KEY"] = "<your_serpapi_key>"
-   os.environ["OPENAI_API_KEY"] = "<your_openai_key>"  # or NV_API_KEY if applicable
-   ```
-3. Run cells sequentially. Follow the notebook instructions and remove any example/hard-coded keys first.
+# SerpApi API Key (Required for live Google Search)
+SERPAPI_API_KEY=your_serpapi_key_here
 
-### Locally (Jupyter)
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/LIKHITHADITHYA/Open-Source-llm-with-RAG-.git
-   cd Open-Source-llm-with-RAG-
-   ```
-2. Install dependencies:
-   ```bash
-   python -m pip install -r requirements.txt
-   ```
-3. Start Jupyter:
-   ```bash
-   jupyter notebook
-   ```
-4. Open `RAG.ipynb` and set environment variables (or use a local `.env` and load it safely).
+# Local directory where ChromaDB stores document vectors (Defaults to ./chroma_db)
+CHROMA_PERSIST_DIR=./chroma_db
+```
 
-## Typical workflow in the notebook
-1. Install and import dependencies (langchain and any wrappers).
-2. Provide API keys via env variables (do not hard-code).
-3. Instantiate SerpApi wrapper and a base model client.
-4. Implement `get_realtime_search_results(query)` — includes parsing and optional caching.
-5. Implement `hybrid_rag_system(query)` — calls search function and sends a combined prompt to the model.
-6. Optionally run an interactive `start_chatbot()` that uses the hybrid system.
-7. Evaluate results and tune prompts, caching, and fallback behavior.
-
-## Caching & Robustness
-The notebook demonstrates using `functools.lru_cache` for simple in-process caching. For production or multi-process deployments consider:
-- Redis or Memcached for shared caching.
-- Persistent vector DB (FAISS, Milvus) for storing retrieved context and reuse.
-- Circuit-breakers and retries for API robustness.
-
-## Security and Privacy
-- Never commit API keys to the repository.
-- Sanitize logs and outputs before sharing.
-- If you store or index external content, make sure you comply with copyright and privacy policies.
-
-## Contributing
-Contributions are welcome. Suggested contribution workflow:
-1. Fork the repo.
-2. Create a branch with your change: `git checkout -b feature/your-change`
-3. Commit and push: `git commit -am "Add ..." && git push origin feature/your-change`
-4. Open a Pull Request describing your changes.
-
-## Example: Add README to the repo locally
-If you want to add this README file to the repository locally and push it:
-
+### 2. Install Project Dependencies
+Use the project's virtual environment to install the package dependencies:
 ```bash
-# from the repository root
-git checkout -b docs/add-readme
-# create README.md with content above (save it)
-git add README.md
-git commit -m "Add README with usage and setup instructions"
-git push origin docs/add-readme
-# Open a Pull Request on GitHub from the 'docs/add-readme' branch
+test_venv/bin/pip install -r requirements.txt
 ```
 
-## Troubleshooting
-- ModuleNotFoundError: if `langchain_community` import fails, ensure the right package/version is installed and check the import path; langchain extensions change frequently.
-- If SerpApi returns unexpected formats, inspect raw responses and adapt the parsing logic accordingly.
-- If the base model API returns streaming output or different response shapes, adjust extraction code to match the client SDK.
+---
 
-## License
-Specify your license here (e.g., MIT). Example:
-```
-MIT License
+## Running the Application
+
+Always configure the Python path when launching the modules directly:
+
+### 1. Launch the Gradio Web UI (Default)
+Launches the browser interface on `http://127.0.0.1:7860` for chatting and uploading files:
+```bash
+PYTHONPATH=src test_venv/bin/python -m nvidia_rag.main
 ```
 
-## Contact
-If you have questions, open an issue in the repo or contact the maintainer (LIKHITHADITHYA) via GitHub.
+### 2. Launch the Terminal CLI
+Launches a clean, interactive dialogue shell directly in your console:
+```bash
+PYTHONPATH=src test_venv/bin/python -m nvidia_rag.main --cli
+```
+
+### 3. Launch the REST API Server
+Launches the FastAPI server on `http://0.0.0.0:8000`:
+```bash
+PYTHONPATH=src test_venv/bin/python -m nvidia_rag.main --api
+```
+* **Endpoint Examples**:
+  * Upload Document: `curl -X POST "http://localhost:8000/upload" -F "file=@/path/to/document.pdf"`
+  * Chat Session: `curl -X POST "http://localhost:8000/chat" -H "Content-Type: application/json" -d '{"query": "Hello"}'`
+
+---
+
+## Running Tests
+
+### 1. Run Unit Tests (Offline Validation)
+Executes **13 mocked unit tests** to verify memory sliding, document chunking, prompt templating, and error fallback states:
+```bash
+PYTHONPATH=src test_venv/bin/python tests/test_unit.py
+```
+
+### 2. Run Integration Tests (Online Validation)
+Tests live API endpoints. Requires valid API keys set in your `.env` file:
+```bash
+PYTHONPATH=src test_venv/bin/python tests/test_engine.py
+```

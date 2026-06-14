@@ -1,0 +1,13 @@
+openai
+langchain
+langchain-community
+gradio
+numpy
+requests
+python-dotenv
+google-search-results
+chromadb
+fastapi
+uvicorn
+pydantic
+pypdf
