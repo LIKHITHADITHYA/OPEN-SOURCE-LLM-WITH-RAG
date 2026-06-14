@@ -3,8 +3,15 @@ Gradio Web Interface.
 Provides a user-friendly frontend for the RAG system.
 """
 
+import hashlib
+import os
+import uuid
+
 import gradio as gr
+import pypdf  # pylint: disable=import-error
+
 from nvidia_rag.core.engine import RAGEngine
+from nvidia_rag.tools.splitter import split_text_recursively
 
 
 class WebUI:
@@ -23,13 +30,13 @@ class WebUI:
         """
         self.engine = engine
 
-    def _chat_handler(self, message, history, use_rag, temperature):
+    def _chat_handler(self, message, _history, use_rag, temperature):
         """
         Internal handler for the ChatInterface component.
 
         Args:
             message: The current user message.
-            history: The chat history (provided by Gradio, but we use
+            _history: The chat history (provided by Gradio, but we use
                      engine's memory).
             use_rag: State of the 'Enable RAG' checkbox.
             temperature: Current value of the temperature slider.
@@ -50,6 +57,50 @@ class WebUI:
             f"--- Metadata ---\n"
             f"[Tokens: {tokens} | Source: {source}]"
         )
+
+    def _process_file(self, file_obj):
+        if file_obj is None:
+            return "No file selected."
+        try:
+            # Detect file extension
+            if file_obj.name.lower().endswith(".pdf"):
+                reader = pypdf.PdfReader(file_obj.name)
+                text_parts = []
+                for page in reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text_parts.append(page_text)
+                text = "\n".join(text_parts)
+            else:
+                with open(
+                    file_obj.name, "r", encoding="utf-8"
+                ) as f:
+                    text = f.read()
+
+            if not text.strip():
+                return "❌ Error: The uploaded file has no readable text content."
+
+            file_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+            if self.engine.vector_tool.is_document_ingested(file_hash):
+                return "⚠️ Document already ingested. Skipping."
+
+            chunks = split_text_recursively(text, chunk_size=1000, chunk_overlap=200)
+            if not chunks:
+                return "❌ Error: The split text generated no chunks."
+
+            filename = os.path.basename(file_obj.name)
+            metadatas = [{"source": filename, "doc_hash": file_hash} for _ in chunks]
+            ids = [
+                f"{filename}_{file_hash}_{i}_{uuid.uuid4().hex[:8]}"
+                for i in range(len(chunks))
+            ]
+            self.engine.vector_tool.add_documents(chunks, metadatas=metadatas, ids=ids)
+            return (
+                f"✅ Successfully ingested "
+                f"{len(chunks)} chunks!"
+            )
+        except Exception as e:  # pylint: disable=broad-except
+            return f"❌ Error: {e}"
 
     def build(self) -> gr.Blocks:
         """
@@ -85,9 +136,9 @@ class WebUI:
                             )
                         ],
                         examples=[
-                            "What are the latest AI hardware trends?",
-                            "Tell me about internal project setup.",
-                            "Hello! How can you help me today?"
+                            ["What are the latest AI hardware trends?", True, 0.6],
+                            ["Tell me about internal project setup.", True, 0.6],
+                            ["Hello! How can you help me today?", True, 0.6]
                         ],
                     )
 
@@ -96,35 +147,18 @@ class WebUI:
                     gr.Markdown("### 📄 Document Ingestion")
 
                     file_input = gr.File(
-                        label="Upload Document (TXT)",
-                        file_types=[".txt"]
+                        label="Upload Document (TXT, PDF)",
+                        file_types=[".txt", ".pdf"]
                     )
                     upload_btn = gr.Button("Upload to Vector DB")
                     upload_status = gr.Markdown()
 
-                    def process_file(file_obj):
-                        if file_obj is None:
-                            return "No file selected."
-                        try:
-                            with open(
-                                file_obj.name, "r", encoding="utf-8"
-                            ) as f:
-                                text = f.read()
-                            # Naive chunking: splits by ~1000 characters
-                            chunks = [
-                                text[i:i+1000]
-                                for i in range(0, len(text), 1000)
-                            ]
-                            self.engine.vector_tool.add_documents(chunks)
-                            return (
-                                f"✅ Successfully ingested "
-                                f"{len(chunks)} chunks!"
-                            )
-                        except Exception as e:  # noqa: BLE001
-                            return f"❌ Error: {e}"
+                    def process_file_wrapper(file_obj):
+                        return self._process_file(file_obj)
 
+                    # pylint: disable=no-member
                     upload_btn.click(
-                        fn=process_file,
+                        fn=process_file_wrapper,
                         inputs=[file_input],
                         outputs=[upload_status]
                     )
@@ -137,7 +171,8 @@ class WebUI:
                         "🗑️ Clear Session Memory",
                         variant="stop"
                     )
-                    clear_btn.click(fn=lambda: self.engine.memory.clear())
+                    # pylint: disable=no-member
+                    clear_btn.click(fn=self.engine.memory.clear)
 
                     gr.Markdown("---")
                     gr.Markdown("### 📊 Backend Info")

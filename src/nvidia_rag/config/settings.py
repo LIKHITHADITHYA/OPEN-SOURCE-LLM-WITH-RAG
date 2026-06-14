@@ -37,6 +37,7 @@ class Settings:
     # Model Configuration
     nvidia_base_url: str = "https://integrate.api.nvidia.com/v1"
     default_model: str = "nvidia/llama-3.3-nemotron-super-49b-v1.5"
+    default_embedding_model: str = "nvidia/embeddings-nv-embed-qa-4"
     temperature: float = 0.6
     max_tokens: int = 1024
 

@@ -3,13 +3,18 @@ FastAPI Server implementation.
 Provides a REST interface for interacting with the RAG engine programmatically.
 """
 
+import hashlib
+import io
 from typing import Optional
+import uuid
 
 from fastapi import FastAPI, HTTPException, File, UploadFile
 from pydantic import BaseModel
+import pypdf  # pylint: disable=import-error
 import uvicorn
 
 from nvidia_rag.core.engine import RAGEngine
+from nvidia_rag.tools.splitter import split_text_recursively
 
 # Initialize the FastAPI application
 app = FastAPI(
@@ -66,30 +71,59 @@ async def chat(request: QueryRequest):
 @app.post("/upload")
 async def upload_document(file: UploadFile = File(...)):
     """
-    Upload a text document to the local vector database.
+    Upload a text or PDF document to the local vector database.
 
     Processes the file into chunks and indexes them for RAG.
     """
-    if not file.filename.endswith(".txt"):
+    filename_lower = file.filename.lower()
+    if not (filename_lower.endswith(".txt") or filename_lower.endswith(".pdf")):
         raise HTTPException(
             status_code=400,
-            detail="Only .txt files are supported for now."
+            detail="Only .txt and .pdf files are supported for now."
         )
 
     try:
         content = await file.read()
-        text = content.decode("utf-8")
+        if filename_lower.endswith(".pdf"):
+            pdf_file = io.BytesIO(content)
+            reader = pypdf.PdfReader(pdf_file)
+            text_parts = []
+            for page in reader.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text_parts.append(page_text)
+            text = "\n".join(text_parts)
+        else:
+            text = content.decode("utf-8")
 
-        # Naive chunking
-        chunks = [text[i:i+1000] for i in range(0, len(text), 1000)]
-        engine.vector_tool.add_documents(chunks)
+        if not text.strip():
+            raise ValueError("The uploaded file has no readable text content.")
+
+        file_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        if engine.vector_tool.is_document_ingested(file_hash):
+            return {
+                "status": "skipped",
+                "filename": file.filename,
+                "detail": "Document already ingested. Skipping."
+            }
+
+        chunks = split_text_recursively(text, chunk_size=1000, chunk_overlap=200)
+        if not chunks:
+            raise ValueError("The split text generated no chunks.")
+
+        metadatas = [{"source": file.filename, "doc_hash": file_hash} for _ in chunks]
+        ids = [
+            f"{file.filename}_{file_hash}_{i}_{uuid.uuid4().hex[:8]}"
+            for i in range(len(chunks))
+        ]
+        engine.vector_tool.add_documents(chunks, metadatas=metadatas, ids=ids)
 
         return {
             "status": "success",
             "filename": file.filename,
             "chunks_added": len(chunks)
         }
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Failed to process document: {str(e)}"
@@ -98,7 +132,6 @@ async def upload_document(file: UploadFile = File(...)):
 
 @app.get("/health")
 async def health():
-
     """Simple health check endpoint for monitoring."""
     return {"status": "healthy", "model": "Llama-3"}
 

@@ -9,3 +9,9 @@ venv/
 chroma_db/
 diagnose_output.txt
 verbose_import.txt
+.venv/
+test_venv/
+.uv/
+.pytest_cache/
+chroma_db_backup/
+

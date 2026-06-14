@@ -10,3 +10,4 @@ chromadb
 fastapi
 uvicorn
 pydantic
+pypdf

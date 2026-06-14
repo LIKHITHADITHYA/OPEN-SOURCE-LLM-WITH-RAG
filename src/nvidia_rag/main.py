@@ -13,6 +13,10 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+# Silence verbose third-party libraries
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("openai").setLevel(logging.WARNING)
 
 logger = logging.getLogger("nvidia_rag.main")
 
@@ -34,6 +38,9 @@ def main():
         arg = sys.argv[1].lower()
 
         if arg == "--cli":
+            # Silence all runtime logs in CLI mode for a clean chat experience
+            logging.disable(logging.CRITICAL)
+
             # Launch terminal-based chat interface
             print("\n--- Welcome to NVIDIA RAG CLI ---")
             print("Type 'exit' or 'quit' to end the session.\n")
@@ -48,8 +55,7 @@ def main():
 
                     # Generate and display response
                     resp, tokens, source = engine.generate_response(query)
-                    print(f"\nBot: {resp}")
-                    print(f"(Tokens: {tokens} | Source: {source})\n")
+                    print(f"\nBot: {resp}\n")
                 except KeyboardInterrupt:
                     break
             print("\nGoodbye!")

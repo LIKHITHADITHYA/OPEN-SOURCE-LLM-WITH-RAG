@@ -19,7 +19,8 @@ dependencies = [
     "chromadb",
     "fastapi",
     "uvicorn",
-    "pydantic"
+    "pydantic",
+    "pypdf"
 ]
 
 [project.scripts]
